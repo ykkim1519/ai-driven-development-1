@@ -1,22 +1,25 @@
 export interface IPost {
     postId: string
-    imageURL: string
+    userId: string
     userName: string
+    userProfile: string
+    imageURL: string
+    prompt: string
+    description?: string
     likes: number
     comments: number
-    isLiked?: boolean
-    prompt?: string
-    createdAt?: string
-    userProfile?: string
+    isLiked: boolean
+    createdAt: string
 }
 
 export interface IComment {
-    id: string
+    commentId: string
     postId: string
+    userId: string
     userName: string
+    userProfile: string
     content: string
     createdAt: string
-    userProfile?: string
 }
 
 export interface IGenerateImageResponse {
@@ -202,4 +205,11 @@ export interface ISharePostResponse {
         code: string
         message: string
     }
+}
+
+// 공유 옵션 타입 정의
+export interface ShareOptions {
+    title: string
+    text?: string
+    url: string
 }
