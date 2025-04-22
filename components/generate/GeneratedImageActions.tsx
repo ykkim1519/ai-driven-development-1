@@ -2,6 +2,8 @@ import { Button } from '@/components/ui/button'
 import { Download, Save, Share2 } from 'lucide-react'
 import { IGeneratedImageActionsProps } from '@/types'
 import { useToast } from '@/hooks/use-toast'
+import { useGalleryStore } from '@/store/gallery'
+import { useRouter } from 'next/navigation'
 
 export function GeneratedImageActions({
     imageUrl,
@@ -9,12 +11,43 @@ export function GeneratedImageActions({
     styleOptions
 }: IGeneratedImageActionsProps) {
     const { toast } = useToast()
+    const router = useRouter()
+    const { images, setImages, setFilteredImages } = useGalleryStore()
 
     const handleSave = async () => {
-        toast({
-            title: '저장 완료',
-            description: '이미지가 갤러리에 저장되었습니다.'
-        })
+        try {
+            // 새로운 이미지 객체 생성
+            const newImage = {
+                id: `gallery-${Date.now()}`,
+                userId: 'user1',
+                imageUrl,
+                prompt,
+                styleOptions,
+                tags: [],
+                isPublic: false,
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString()
+            }
+
+            // 갤러리 스토어 업데이트
+            const updatedImages = [newImage, ...images]
+            setImages(updatedImages)
+            setFilteredImages(updatedImages)
+
+            toast({
+                title: '저장 완료',
+                description: '이미지가 갤러리에 저장되었습니다.'
+            })
+
+            // 갤러리 페이지로 이동
+            router.push('/gallery')
+        } catch (error) {
+            toast({
+                variant: 'destructive',
+                title: '저장 실패',
+                description: '이미지 저장 중 오류가 발생했습니다.'
+            })
+        }
     }
 
     const handleShare = () => {

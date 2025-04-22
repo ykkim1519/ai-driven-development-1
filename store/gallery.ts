@@ -31,6 +31,8 @@ interface GalleryStore {
     ) => Promise<void>
     setFilter: (filter: Partial<FilterOptions>) => void
     resetFilters: () => void
+    setImages: (images: IGalleryImage[]) => void
+    setFilteredImages: (images: IGalleryImage[]) => void
 }
 
 const defaultFilters: FilterOptions = {
@@ -40,11 +42,155 @@ const defaultFilters: FilterOptions = {
 
 const ITEMS_PER_PAGE = 12
 
+// 목업 데이터
+const MOCK_IMAGES: IGalleryImage[] = [
+    {
+        id: '1',
+        userId: 'user1',
+        imageUrl: 'https://picsum.photos/seed/gallery1/800',
+        prompt: 'A serene Japanese garden with cherry blossoms',
+        styleOptions: {
+            artStyle: '디지털아트',
+            colorTone: '밝은'
+        },
+        tags: ['자연', '정원', '일본'],
+        isPublic: true,
+        createdAt: '2024-03-15T10:00:00Z',
+        updatedAt: '2024-03-15T10:00:00Z'
+    },
+    {
+        id: '2',
+        userId: 'user1',
+        imageUrl: 'https://picsum.photos/seed/gallery2/800',
+        prompt: 'A futuristic cityscape with neon lights',
+        styleOptions: {
+            artStyle: '디지털아트',
+            colorTone: '어두운'
+        },
+        tags: ['도시', '미래', '네온'],
+        isPublic: false,
+        createdAt: '2024-03-14T15:30:00Z',
+        updatedAt: '2024-03-14T15:30:00Z'
+    },
+    {
+        id: '3',
+        userId: 'user1',
+        imageUrl: 'https://picsum.photos/seed/gallery3/800',
+        prompt: 'A magical forest with glowing mushrooms',
+        styleOptions: {
+            artStyle: '수채화',
+            colorTone: '파스텔'
+        },
+        tags: ['숲', '마법', '자연'],
+        isPublic: true,
+        createdAt: '2024-03-13T09:45:00Z',
+        updatedAt: '2024-03-13T09:45:00Z'
+    },
+    {
+        id: '4',
+        userId: 'user1',
+        imageUrl: 'https://picsum.photos/seed/gallery4/800',
+        prompt: 'A steampunk airship in the clouds',
+        styleOptions: {
+            artStyle: '유화',
+            colorTone: '메탈릭'
+        },
+        tags: ['스팀펑크', '비행선', '구름'],
+        isPublic: false,
+        createdAt: '2024-03-12T14:20:00Z',
+        updatedAt: '2024-03-12T14:20:00Z'
+    },
+    {
+        id: '5',
+        userId: 'user1',
+        imageUrl: 'https://picsum.photos/seed/gallery5/800',
+        prompt: 'An underwater scene with bioluminescent creatures',
+        styleOptions: {
+            artStyle: '디지털아트',
+            colorTone: '컬러풀'
+        },
+        tags: ['바다', '생물', '발광'],
+        isPublic: true,
+        createdAt: '2024-03-11T11:15:00Z',
+        updatedAt: '2024-03-11T11:15:00Z'
+    },
+    {
+        id: '6',
+        userId: 'user1',
+        imageUrl: 'https://picsum.photos/seed/gallery6/800',
+        prompt: 'A cozy cafe interior with vintage furniture',
+        styleOptions: {
+            artStyle: '유화',
+            colorTone: '밝은'
+        },
+        tags: ['카페', '인테리어', '빈티지'],
+        isPublic: false,
+        createdAt: '2024-03-10T16:40:00Z',
+        updatedAt: '2024-03-10T16:40:00Z'
+    },
+    {
+        id: '7',
+        userId: 'user1',
+        imageUrl: 'https://picsum.photos/seed/gallery7/800',
+        prompt: 'A mystical library with floating books',
+        styleOptions: {
+            artStyle: '디지털아트',
+            colorTone: '어두운'
+        },
+        tags: ['도서관', '마법', '책'],
+        isPublic: true,
+        createdAt: '2024-03-09T13:25:00Z',
+        updatedAt: '2024-03-09T13:25:00Z'
+    },
+    {
+        id: '8',
+        userId: 'user1',
+        imageUrl: 'https://picsum.photos/seed/gallery8/800',
+        prompt: 'A cyberpunk street market at night',
+        styleOptions: {
+            artStyle: '디지털아트',
+            colorTone: '컬러풀'
+        },
+        tags: ['사이버펑크', '시장', '밤'],
+        isPublic: false,
+        createdAt: '2024-03-08T10:50:00Z',
+        updatedAt: '2024-03-08T10:50:00Z'
+    },
+    {
+        id: '9',
+        userId: 'user1',
+        imageUrl: 'https://picsum.photos/seed/gallery9/800',
+        prompt: 'A peaceful mountain landscape with a temple',
+        styleOptions: {
+            artStyle: '수채화',
+            colorTone: '밝은'
+        },
+        tags: ['산', '사원', '자연'],
+        isPublic: true,
+        createdAt: '2024-03-07T08:35:00Z',
+        updatedAt: '2024-03-07T08:35:00Z'
+    },
+    {
+        id: '10',
+        userId: 'user1',
+        imageUrl: 'https://picsum.photos/seed/gallery10/800',
+        prompt: 'A fantasy tavern with magical drinks',
+        styleOptions: {
+            artStyle: '유화',
+            colorTone: '어두운'
+        },
+        tags: ['선술집', '판타지', '마법'],
+        isPublic: false,
+        createdAt: '2024-03-06T17:55:00Z',
+        updatedAt: '2024-03-06T17:55:00Z'
+    }
+]
+
 export const useGalleryStore = create<GalleryStore>((set, get) => ({
-    images: [],
+    images: MOCK_IMAGES,
     filters: defaultFilters,
-    filteredImages: [],
-    totalCount: 0,
+    filteredImages: MOCK_IMAGES,
+    totalCount: MOCK_IMAGES.length,
     hasMore: false,
     currentPage: 1,
     isLoading: false,
@@ -55,43 +201,61 @@ export const useGalleryStore = create<GalleryStore>((set, get) => ({
             set({ isLoading: true, error: null, currentPage: 1 })
             const filters = get().filters
 
-            const queryParams = new URLSearchParams({
-                page: '1',
-                limit: ITEMS_PER_PAGE.toString(),
-                sortBy: filters.sortBy
-            })
+            // 목업 데이터 필터링
+            let filteredImages = [...MOCK_IMAGES]
 
-            if (filters.artStyle)
-                queryParams.append('artStyle', filters.artStyle)
-            if (filters.colorTone)
-                queryParams.append('colorTone', filters.colorTone)
-            if (filters.dateRange?.from) {
-                queryParams.append(
-                    'startDate',
-                    filters.dateRange.from.toISOString()
+            if (filters.artStyle) {
+                filteredImages = filteredImages.filter(
+                    img => img.styleOptions.artStyle === filters.artStyle
                 )
+            }
+
+            if (filters.colorTone) {
+                filteredImages = filteredImages.filter(
+                    img => img.styleOptions.colorTone === filters.colorTone
+                )
+            }
+
+            if (filters.isPublic !== undefined) {
+                filteredImages = filteredImages.filter(
+                    img => img.isPublic === filters.isPublic
+                )
+            }
+
+            // 날짜 필터링 추가
+            if (filters.dateRange?.from) {
+                const startDate = new Date(filters.dateRange.from)
+                startDate.setHours(0, 0, 0, 0)
+
+                filteredImages = filteredImages.filter(img => {
+                    const imgDate = new Date(img.createdAt)
+                    imgDate.setHours(0, 0, 0, 0)
+                    return imgDate >= startDate
+                })
+
                 if (filters.dateRange.to) {
-                    queryParams.append(
-                        'endDate',
-                        filters.dateRange.to.toISOString()
-                    )
+                    const endDate = new Date(filters.dateRange.to)
+                    endDate.setHours(23, 59, 59, 999)
+
+                    filteredImages = filteredImages.filter(img => {
+                        const imgDate = new Date(img.createdAt)
+                        return imgDate <= endDate
+                    })
                 }
             }
-            if (filters.isPublic !== undefined) {
-                queryParams.append('isPublic', filters.isPublic.toString())
-            }
 
-            const response = await fetch(`/api/gallery?${queryParams}`)
-            if (!response.ok) {
-                throw new Error('이미지 목록을 불러오는데 실패했습니다.')
-            }
+            // 정렬
+            filteredImages.sort((a, b) => {
+                const dateA = new Date(a.createdAt).getTime()
+                const dateB = new Date(b.createdAt).getTime()
+                return filters.sortBy === 'latest' ? dateB - dateA : dateA - dateB
+            })
 
-            const data = await response.json()
             set({
-                images: data.images,
-                filteredImages: data.images,
-                totalCount: data.totalCount,
-                hasMore: data.hasMore
+                images: filteredImages,
+                filteredImages: filteredImages,
+                totalCount: filteredImages.length,
+                hasMore: false
             })
         } catch (error) {
             set({
@@ -106,81 +270,25 @@ export const useGalleryStore = create<GalleryStore>((set, get) => ({
     },
 
     loadMoreImages: async () => {
-        try {
-            const { currentPage, filters, isLoading, hasMore, filteredImages } =
-                get()
-            if (isLoading || !hasMore) return
-
-            set({ isLoading: true, error: null })
-            const nextPage = currentPage + 1
-
-            const queryParams = new URLSearchParams({
-                page: nextPage.toString(),
-                limit: ITEMS_PER_PAGE.toString(),
-                sortBy: filters.sortBy
-            })
-
-            if (filters.artStyle)
-                queryParams.append('artStyle', filters.artStyle)
-            if (filters.colorTone)
-                queryParams.append('colorTone', filters.colorTone)
-            if (filters.dateRange?.from) {
-                queryParams.append(
-                    'startDate',
-                    filters.dateRange.from.toISOString()
-                )
-                if (filters.dateRange.to) {
-                    queryParams.append(
-                        'endDate',
-                        filters.dateRange.to.toISOString()
-                    )
-                }
-            }
-            if (filters.isPublic !== undefined) {
-                queryParams.append('isPublic', filters.isPublic.toString())
-            }
-
-            const response = await fetch(`/api/gallery?${queryParams}`)
-            if (!response.ok) {
-                throw new Error('추가 이미지를 불러오는데 실패했습니다.')
-            }
-
-            const data = await response.json()
-            set({
-                currentPage: nextPage,
-                images: [...filteredImages, ...data.images],
-                filteredImages: [...filteredImages, ...data.images],
-                hasMore: data.hasMore
-            })
-        } catch (error) {
-            set({
-                error:
-                    error instanceof Error
-                        ? error.message
-                        : '알 수 없는 오류가 발생했습니다.'
-            })
-        } finally {
-            set({ isLoading: false })
-        }
+        // 목업 데이터에서는 추가 로드가 필요 없음
+        return
     },
 
     deleteImage: async (imageId: string) => {
         try {
             set({ isLoading: true, error: null })
 
-            const response = await fetch(`/api/gallery/${imageId}`, {
-                method: 'DELETE'
-            })
-
-            if (!response.ok) {
-                throw new Error('이미지 삭제에 실패했습니다.')
-            }
-
-            // 성공적으로 삭제된 경우 로컬 상태 업데이트
+            // 목업 데이터에서 이미지 삭제
             const { images, filteredImages } = get()
+            const newImages = images.filter(img => img.id !== imageId)
+            const newFilteredImages = filteredImages.filter(
+                img => img.id !== imageId
+            )
+
             set({
-                images: images.filter(img => img.id !== imageId),
-                filteredImages: filteredImages.filter(img => img.id !== imageId)
+                images: newImages,
+                filteredImages: newFilteredImages,
+                totalCount: newImages.length
             })
         } catch (error) {
             set({
@@ -198,31 +306,19 @@ export const useGalleryStore = create<GalleryStore>((set, get) => ({
         try {
             set({ isLoading: true, error: null })
 
-            const response = await fetch(`/api/gallery/${imageId}`, {
-                method: 'PATCH',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ tags, isPublic })
-            })
-
-            if (!response.ok) {
-                throw new Error('이미지 정보 업데이트에 실패했습니다.')
-            }
-
-            const { image } = await response.json()
-
-            // 성공적으로 업데이트된 경우 로컬 상태 즉시 업데이트
+            // 목업 데이터 업데이트
             const { images, filteredImages } = get()
             const updateImages = (imgs: IGalleryImage[]) =>
-                imgs.map(img => (img.id === imageId ? { ...img, tags, isPublic } : img))
+                imgs.map(img =>
+                    img.id === imageId
+                        ? { ...img, tags, isPublic, updatedAt: new Date().toISOString() }
+                        : img
+                )
 
             set({
                 images: updateImages(images),
                 filteredImages: updateImages(filteredImages)
             })
-
-            return image
         } catch (error) {
             set({
                 error:
@@ -230,7 +326,6 @@ export const useGalleryStore = create<GalleryStore>((set, get) => ({
                         ? error.message
                         : '알 수 없는 오류가 발생했습니다.'
             })
-            throw error
         } finally {
             set({ isLoading: false })
         }
@@ -240,11 +335,19 @@ export const useGalleryStore = create<GalleryStore>((set, get) => ({
         set(state => ({
             filters: { ...state.filters, ...filter }
         }))
-        get().fetchImages() // 필터 변경 시 새로운 데이터 fetch
+        get().fetchImages()
     },
 
     resetFilters: () => {
         set({ filters: defaultFilters })
-        get().fetchImages() // 필터 초기화 시 새로운 데이터 fetch
+        get().fetchImages()
+    },
+
+    setImages: (images: IGalleryImage[]) => {
+        set({ images, totalCount: images.length })
+    },
+
+    setFilteredImages: (images: IGalleryImage[]) => {
+        set({ filteredImages: images })
     }
 }))

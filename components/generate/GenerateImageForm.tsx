@@ -10,9 +10,29 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { IStyleOptions, IGenerateResponse } from '@/types'
 import { useToast } from '@/hooks/use-toast'
 
+// 이미지 생성 상태를 관리하기 위한 인터페이스
+interface PredictionStatus {
+    id: string
+    status: 'starting' | 'processing' | 'succeeded' | 'failed'
+    output?: string[]
+    error?: string
+}
+
 const DEFAULT_STYLE_OPTIONS: IStyleOptions = {
     artStyle: '디지털아트',
     colorTone: '밝은'
+}
+
+// 목업 이미지 URL
+const MOCK_IMAGE_URL = 'https://picsum.photos/seed/generated/800'
+
+// 이미지 생성 상태를 폴링하는 함수
+const pollPrediction = async (predictionId: string): Promise<PredictionStatus> => {
+    const response = await fetch(`/api/predictions/${predictionId}`)
+    if (!response.ok) {
+        throw new Error('예측 상태를 가져오는데 실패했습니다')
+    }
+    return response.json()
 }
 
 export function GenerateImageForm() {
@@ -20,11 +40,10 @@ export function GenerateImageForm() {
     const searchParams = useSearchParams()
     const [prompt, setPrompt] = useState('')
     const [error, setError] = useState('')
-    const [styleOptions, setStyleOptions] = useState<IStyleOptions>(
-        DEFAULT_STYLE_OPTIONS
-    )
+    const [styleOptions, setStyleOptions] = useState<IStyleOptions>(DEFAULT_STYLE_OPTIONS)
     const [generatedImageUrl, setGeneratedImageUrl] = useState('')
     const [isGenerating, setIsGenerating] = useState(false)
+    const [predictionId, setPredictionId] = useState<string | null>(null)
 
     useEffect(() => {
         const urlPrompt = searchParams.get('prompt')
@@ -53,39 +72,66 @@ export function GenerateImageForm() {
             return
         }
 
+        if (!styleOptions.artStyle || !styleOptions.colorTone) {
+            setError('아트 스타일과 색감을 선택해 주세요')
+            return
+        }
+
         try {
             setIsGenerating(true)
             setError('')
+            setGeneratedImageUrl('')
 
-            const response = await fetch('/api/generate', {
+            console.log('Style Options:', styleOptions)
+
+            // 이미지 생성 요청
+            const response = await fetch('/api/predictions', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
                     prompt,
-                    styleOptions
+                    aspect_ratio: '16:9',
+                    num_outputs: 1,
+                    art_style: styleOptions.artStyle,
+                    color_tone: styleOptions.colorTone
                 })
             })
 
-            const data: IGenerateResponse = await response.json()
-
-            if (!data.success) {
-                throw new Error(
-                    data.error?.message || '이미지 생성에 실패했습니다'
-                )
+            if (!response.ok) {
+                const errorData = await response.json()
+                throw new Error(errorData.error || '이미지 생성 요청에 실패했습니다')
             }
 
-            setGeneratedImageUrl(data.imageUrl)
-            toast({
-                title: '이미지 생성 완료',
-                description: '이미지가 성공적으로 생성되었습니다.'
-            })
+            const prediction = await response.json()
+            console.log('Prediction response:', prediction)
+            setPredictionId(prediction.id)
+
+            // 이미지 생성 상태 폴링
+            let currentPrediction = prediction
+            while (
+                currentPrediction.status !== 'succeeded' &&
+                currentPrediction.status !== 'failed'
+            ) {
+                await new Promise(resolve => setTimeout(resolve, 1000))
+                currentPrediction = await pollPrediction(prediction.id)
+                console.log('Current prediction status:', currentPrediction.status)
+            }
+
+            if (currentPrediction.status === 'failed') {
+                throw new Error(currentPrediction.error || '이미지 생성에 실패했습니다')
+            }
+
+            if (currentPrediction.output && currentPrediction.output.length > 0) {
+                setGeneratedImageUrl(currentPrediction.output[0])
+                toast({
+                    title: '이미지 생성 완료',
+                    description: '이미지가 성공적으로 생성되었습니다.'
+                })
+            }
         } catch (err) {
-            const errorMessage =
-                err instanceof Error
-                    ? err.message
-                    : '이미지 생성 중 오류가 발생했습니다'
+            const errorMessage = err instanceof Error ? err.message : '이미지 생성 중 오류가 발생했습니다'
             setError(errorMessage)
             toast({
                 variant: 'destructive',
@@ -94,6 +140,7 @@ export function GenerateImageForm() {
             })
         } finally {
             setIsGenerating(false)
+            setPredictionId(null)
         }
     }
 
@@ -125,41 +172,39 @@ export function GenerateImageForm() {
                 )}
             </div>
 
-            <div className="space-y-6">
-                <div className="relative">
-                    <div className="absolute inset-0 bg-purple-600/5 blur-lg rounded-lg" />
-                    <div className="relative bg-gray-900/30 backdrop-blur-sm border border-purple-600/20 rounded-lg p-4">
-                        <StyleOptions
-                            options={styleOptions}
-                            onChange={setStyleOptions}
-                        />
-                    </div>
+            <div className="relative">
+                <div className="absolute inset-0 bg-purple-600/5 blur-lg rounded-lg" />
+                <div className="relative bg-gray-900/30 backdrop-blur-sm border border-purple-600/20 rounded-lg p-4">
+                    <StyleOptions
+                        options={styleOptions}
+                        onChange={setStyleOptions}
+                    />
                 </div>
-
-                <div className="relative">
-                    <div className="absolute inset-0 bg-purple-600/5 blur-lg rounded-lg" />
-                    <div className="relative bg-gray-900/30 backdrop-blur-sm border border-purple-600/20 rounded-lg p-4">
-                        <ImageGeneration
-                            onGenerate={handleGenerate}
-                            isGenerating={isGenerating}
-                            generatedImageUrl={generatedImageUrl}
-                        />
-                    </div>
-                </div>
-
-                {generatedImageUrl && (
-                    <div className="relative">
-                        <div className="absolute inset-0 bg-purple-600/5 blur-lg rounded-lg" />
-                        <div className="relative bg-gray-900/30 backdrop-blur-sm border border-purple-600/20 rounded-lg p-4">
-                            <GeneratedImageActions
-                                imageUrl={generatedImageUrl}
-                                prompt={prompt}
-                                styleOptions={styleOptions}
-                            />
-                        </div>
-                    </div>
-                )}
             </div>
+
+            <div className="relative">
+                <div className="absolute inset-0 bg-purple-600/5 blur-lg rounded-lg" />
+                <div className="relative bg-gray-900/30 backdrop-blur-sm border border-purple-600/20 rounded-lg p-4">
+                    <ImageGeneration
+                        onGenerate={handleGenerate}
+                        isGenerating={isGenerating}
+                        generatedImageUrl={generatedImageUrl}
+                    />
+                </div>
+            </div>
+
+            {generatedImageUrl && (
+                <div className="relative">
+                    <div className="absolute inset-0 bg-purple-600/5 blur-lg rounded-lg" />
+                    <div className="relative bg-gray-900/30 backdrop-blur-sm border border-purple-600/20 rounded-lg p-4">
+                        <GeneratedImageActions
+                            imageUrl={generatedImageUrl}
+                            prompt={prompt}
+                            styleOptions={styleOptions}
+                        />
+                    </div>
+                </div>
+            )}
         </div>
     )
 }

@@ -4,16 +4,27 @@ const nextConfig = {
         remotePatterns: [
             {
                 protocol: 'https',
-                hostname: 'api.dicebear.com',
-                pathname: '/7.x/**',
+                hostname: 'picsum.photos',
             },
             {
                 protocol: 'https',
-                hostname: 'picsum.photos',
-                pathname: '/seed/**',
+                hostname: 'replicate.com',
+            },
+            {
+                protocol: 'https',
+                hostname: 'replicate.delivery',
+            },
+            {
+                protocol: 'https',
+                hostname: 'jgvktppjdbligdhehesn.supabase.co',
+            },
+            {
+                protocol: 'http',
+                hostname: 'localhost',
+                port: '3000',
+                pathname: '/mock-**',
             },
         ],
-        domains: ['picsum.photos'],
     },
 }
 
